@@ -16,7 +16,7 @@ import java.io.*;
 // recebido for "TERMINAR", a conexão com o cliente é fechada.
 
 
-public class ServidorTCP{
+public class Servidor{
 	public static void main( String args[]  ) {
 
 		// soquete onde o servidor irá ouvir requisições

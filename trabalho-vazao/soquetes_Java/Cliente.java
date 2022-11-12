@@ -80,7 +80,7 @@ class SessaoCliente implements Runnable{
 
 }//class SessaoCliente
 
-public class ClienteTCP{
+public class Cliente{
 	public static void main( String args[]  ) {
 		Runnable cliente;
 		Thread t;
