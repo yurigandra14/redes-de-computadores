@@ -91,17 +91,30 @@ class SessaoServidor implements Runnable{
 			// obtém o fluxo de entrada da conexao aberta
 			entrada = new DataInputStream( conexao.getInputStream());
 			
-// Implementa abaixo o nosso protocolo de comunicação da aplicação
+			// Implementa abaixo o nosso protocolo de comunicação da aplicação
 
-			String mensagem = ""; 
+			// possibilita ao cliente realizar mais de uma solicitacao por sessao
+			boolean continua = true;
+			while(continua){
+				String requisicao = new String(entrada.readUTF());
+				System.out.println( idSessao + ": \t" + requisicao);
 
-			do{
-				mensagem = entrada.readUTF(); 
-				System.out.println(mensagem); 
-				saida.writeUTF( "." ); 
-			}while( !mensagem.equals("fim") ); 
+				String[] tokens = requisicao.split(" ");
+				
+				String comandoRecebido = tokens[0];
+				if( comandoRecebido.equals("GET") ){					
+					
+					enviaPacotes(saida);
+					System.out.println( idSessao + ": \t" + "Teste Concluído!");
+					continua = false;
+				}
+				else{
+					System.err.println("ERRO: comando invalido!");
+					continua = false;
+				}
+			}//while 
 
-// Fim da implementação do nosso protocolo de comunicação da aplicação
+			// Fim da implementação do nosso protocolo de comunicação da aplicação
 
 			// fecha os fluxos de entrada e saída
 			saida.close();
@@ -115,5 +128,39 @@ class SessaoServidor implements Runnable{
 		}
 
 	}//run()
+
+	public void enviaPacotes(DataOutputStream saida){
+		try{
+			// loop: le a entrada do pipe e escreve no arquivo
+			
+			byte[] buffer = new byte[4*1024]; // tamanho padrao do cluster de HDD	
+			int bytesLidos = 0;
+
+			// Implementação do teste de vazão aqui //
+
+			long startTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
+
+			do {
+				bytesLidos = buffer.length;
+				if(bytesLidos > 0){
+					saida.write(buffer, 0, bytesLidos); // caso o buffer nao esteja cheio, envia ate bytesLidos-1
+				}
+
+				endTime = System.currentTimeMillis();
+			} while (endTime - startTime < 10000);
+		
+		}//try	
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
+		
+	}
 
 }//class SessaoServidor

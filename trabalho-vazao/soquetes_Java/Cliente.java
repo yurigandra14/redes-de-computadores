@@ -51,19 +51,15 @@ class SessaoCliente implements Runnable{
 
 			// IMPORTANTE: implementa abaixo o nosso protocolo de comunicação da aplicação
 
-			String mensagem, resposta = ""; 
-			Scanner teclado = new Scanner(System.in); 
+			// FAZ O PEDIDO
+			System.out.println("\t" + idCliente + " pedindo arquivo");
+			saida.writeUTF("GET ");
+			saida.flush();
+			
+			// RECEBE O SERVICO
+			System.out.println("\t" + idCliente + " recebendo arquivo");
+			recebePacotes(entrada);
 
-
-			do{
-				System.out.print("Digite sua mensagem: "); 
-				mensagem = teclado.nextLine();
-				saida.writeUTF(mensagem); // envia pro servidor
-
-				resposta = entrada.readUTF(); // le a resposta do servidor
-				System.out.print("Servidor disse: " + resposta + "\n"); 
-				
-			}while( !mensagem.equals("fim") ); 
 
 			// fecha os fluxos (entrada e saída)
 			saida.close();
@@ -78,6 +74,37 @@ class SessaoCliente implements Runnable{
 
 	}//run()
 
+	public void recebePacotes(DataInputStream entrada){
+		
+		long totalBytes = 0;
+		
+		try{
+
+		// loop: le a entrada do pipe e escreve no arquivo
+		
+			byte[] buffer = new byte[10*4*1024]; //40 KB	
+			int bytesLidos;
+				do{
+					bytesLidos = entrada.read(buffer);
+					if(bytesLidos > 0)
+						totalBytes = totalBytes + bytesLidos;
+				}while(bytesLidos>0);
+
+			System.out.println(totalBytes);
+			
+		}//try
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
+		
+	}// recebeArquivo
+
 }//class SessaoCliente
 
 public class Cliente{
@@ -89,9 +116,9 @@ public class Cliente{
 		//String serverIP = "localhost";
 
 		int serverPort = Integer.parseInt(args[1]);
-		//int serverPort = 8585;
+		//int serverPort = 4549;
 
-		int qtdeClientes = 3;	// altere para o valor que desejar
+		int qtdeClientes = 1;	// altere para o valor que desejar
 
 		for( int i=0; i < qtdeClientes; i++ ){
 			
