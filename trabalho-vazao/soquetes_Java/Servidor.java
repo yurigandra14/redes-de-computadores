@@ -134,7 +134,7 @@ class SessaoServidor implements Runnable{
 			// loop: le a entrada do pipe e escreve no arquivo
 			
 			byte[] buffer = new byte[4*1024]; // tamanho padrao do cluster de HDD	
-			int bytesLidos = 0;
+			long bytesEscritos = 0;
 
 			// Implementação do teste de vazão aqui //
 
@@ -142,13 +142,30 @@ class SessaoServidor implements Runnable{
 			long endTime = System.currentTimeMillis();
 
 			do {
-				bytesLidos = buffer.length;
-				if(bytesLidos > 0){
-					saida.write(buffer, 0, bytesLidos); // caso o buffer nao esteja cheio, envia ate bytesLidos-1
-				}
-
+				saida.write(buffer, 0, buffer.length); // caso o buffer nao esteja cheio, envia ate bytesLidos-1
 				endTime = System.currentTimeMillis();
+				bytesEscritos += buffer.length;
 			} while (endTime - startTime < 10000);
+
+			float vazao = (float)bytesEscritos/(endTime-startTime); // bytes/ms
+			vazao = vazao*8; // bits/ms
+			vazao = vazao/1000.0F; //bits/seg
+
+			System.out.println(vazao);
+
+			if(vazao > 1000000000){
+				vazao = vazao / 1000000000; // Gbit/seg
+				System.out.println(vazao + "Gb/s");
+			}
+			else if(vazao > 1000000){
+				vazao = vazao / 1000000; // Mbit/seg
+				System.out.println(vazao + "Mb/s");
+			}
+			else if(vazao > 1000){
+				vazao = vazao / 1000; // Kbit/seg
+				System.out.println(vazao + "Kb/s");
+			}
+
 		
 		}//try	
 		catch(EOFException erroLeitura){

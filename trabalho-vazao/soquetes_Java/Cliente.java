@@ -86,8 +86,7 @@ class SessaoCliente implements Runnable{
 			int bytesLidos;
 				do{
 					bytesLidos = entrada.read(buffer);
-					if(bytesLidos > 0)
-						totalBytes = totalBytes + bytesLidos;
+					totalBytes = totalBytes + bytesLidos;
 				}while(bytesLidos>0);
 
 			System.out.println(totalBytes);
