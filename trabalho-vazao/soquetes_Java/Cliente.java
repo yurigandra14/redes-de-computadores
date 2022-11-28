@@ -52,14 +52,22 @@ class SessaoCliente implements Runnable{
 			// IMPORTANTE: implementa abaixo o nosso protocolo de comunicação da aplicação
 
 			// FAZ O PEDIDO
-			System.out.println("\t" + idCliente + " pedindo arquivo");
-			saida.writeUTF("GET ");
+			System.out.println("\t" + idCliente + " Solicitando Teste de Vazão");
+			saida.writeInt(1);
 			saida.flush();
 			
 			// RECEBE O SERVICO
-			System.out.println("\t" + idCliente + " recebendo arquivo");
+			System.out.println("\t" + idCliente + " Resultado: ");
 			recebePacotes(entrada);
 
+			// PING
+			System.out.println("\t" + idCliente + " Ping");
+			saida.writeInt(2);
+			saida.flush();
+
+			// RECEBE PING
+			System.out.println("\t" + idCliente + " Latência: ");
+			recebePing(entrada);
 
 			// fecha os fluxos (entrada e saída)
 			saida.close();
@@ -81,16 +89,36 @@ class SessaoCliente implements Runnable{
 		try{
 
 		// loop: le a entrada do pipe e escreve no arquivo
-		
+
+			long startTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
+
 			byte[] buffer = new byte[10*4*1024]; //40 KB	
 			int bytesLidos;
-				do{
-					bytesLidos = entrada.read(buffer);
-					totalBytes = totalBytes + bytesLidos;
-				}while(bytesLidos>0);
 
-			System.out.println(totalBytes);
-			
+			do{
+				bytesLidos = entrada.read(buffer);
+				endTime = System.currentTimeMillis();
+				totalBytes = totalBytes + bytesLidos;
+			}while(bytesLidos>0);
+
+			float vazao = (float)totalBytes/(endTime-startTime); // bytes/ms
+			vazao = vazao*8; // bits/ms
+			vazao = vazao/1000.0F; //bits/seg
+
+			if(vazao > 1000000000){
+				vazao = vazao / 1000000000; // Gbit/seg
+				System.out.println("\t" + vazao + "Gb/s");
+			}
+			else if(vazao > 1000000){
+				vazao = vazao / 1000000; // Mbit/seg
+				System.out.println("\t" + vazao + "Mb/s");
+			}
+			else if(vazao > 1000){
+				vazao = vazao / 1000; // Kbit/seg
+				System.out.println("\t" + vazao + "Kb/s");
+			}
+
 		}//try
 		catch(EOFException erroLeitura){
 			System.err.println("Final de arquivo: " + erroLeitura.toString());
@@ -103,6 +131,35 @@ class SessaoCliente implements Runnable{
 		}
 		
 	}// recebeArquivo
+
+	public void recebePing(DataInputStream entrada) {
+		try{
+
+			// loop: le a entrada do pipe e escreve no arquivo
+
+			long startTime = System.currentTimeMillis();
+
+			do{
+				continue;
+			}while(entrada.read() < 0);
+
+			long endTime = System.currentTimeMillis();
+
+			long latencia = endTime - startTime;
+
+			System.out.println(latencia + "ms");
+
+		}//try
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
+	}
 
 }//class SessaoCliente
 

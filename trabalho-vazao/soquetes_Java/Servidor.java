@@ -43,7 +43,7 @@ public class Servidor{
 					conexao = serverSocket.accept();
 					contador++;
 					
-							System.out.println("+++ cria a sessao nº " + contador + " para atender o novo cliente (" + conexao.getInetAddress() + "," + conexao.getPort() + ")" );
+					System.out.println("+++ cria a sessao nº " + contador + " para atender o novo cliente (" + conexao.getInetAddress() + "," + conexao.getPort() + ")" );
 					// Dispara uma nova thread para gerenciar a nova conexao numa sessão própria
 					Runnable sessao = new SessaoServidor("sessão[" + contador + "]", conexao);
 					Thread t = new Thread( sessao );
@@ -96,16 +96,15 @@ class SessaoServidor implements Runnable{
 			// possibilita ao cliente realizar mais de uma solicitacao por sessao
 			boolean continua = true;
 			while(continua){
-				String requisicao = new String(entrada.readUTF());
-				System.out.println( idSessao + ": \t" + requisicao);
-
-				String[] tokens = requisicao.split(" ");
-				
-				String comandoRecebido = tokens[0];
-				if( comandoRecebido.equals("GET") ){					
-					
+				int requisicao = entrada.readInt();
+				if(requisicao == 1) {					
 					enviaPacotes(saida);
 					System.out.println( idSessao + ": \t" + "Teste Concluído!");
+					continua = false;
+				} else if(requisicao == 2) {
+					saida.writeInt(1);
+					saida.flush();
+					System.out.println( idSessao + ": \t" + "Resposta do Ping");
 					continua = false;
 				}
 				else{
@@ -151,8 +150,6 @@ class SessaoServidor implements Runnable{
 			vazao = vazao*8; // bits/ms
 			vazao = vazao/1000.0F; //bits/seg
 
-			System.out.println(vazao);
-
 			if(vazao > 1000000000){
 				vazao = vazao / 1000000000; // Gbit/seg
 				System.out.println(vazao + "Gb/s");
@@ -166,7 +163,6 @@ class SessaoServidor implements Runnable{
 				System.out.println(vazao + "Kb/s");
 			}
 
-		
 		}//try	
 		catch(EOFException erroLeitura){
 			System.err.println("Final de arquivo: " + erroLeitura.toString());
