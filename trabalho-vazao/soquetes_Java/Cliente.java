@@ -51,6 +51,7 @@ class SessaoCliente implements Runnable{
 
 			// IMPORTANTE: implementa abaixo o nosso protocolo de comunicação da aplicação
 
+			//TODO: mudar a vazao pelo ping 
 			// FAZ O PEDIDO
 			System.out.println("\t" + idCliente + " Solicitando Teste de Vazão");
 			saida.writeInt(1);
@@ -61,7 +62,7 @@ class SessaoCliente implements Runnable{
 			recebePacotes(entrada);
 
 			// PING
-			System.out.println("\t" + idCliente + " Ping");
+			System.out.println("\t" + idCliente + " Solicitando Teste de Ping:");
 			saida.writeInt(2);
 			saida.flush();
 
@@ -102,9 +103,9 @@ class SessaoCliente implements Runnable{
 				totalBytes = totalBytes + bytesLidos;
 			}while(bytesLidos>0);
 
-			float vazao = (float)totalBytes/(endTime-startTime); // bytes/ms
+			float vazao = ((float)totalBytes)/(endTime-startTime); // bytes/ms
 			vazao = vazao*8; // bits/ms
-			vazao = vazao/1000.0F; //bits/seg
+			vazao = vazao*1000.0F; //bits/seg
 
 			if(vazao > 1000000000){
 				vazao = vazao / 1000000000; // Gbit/seg
@@ -137,17 +138,17 @@ class SessaoCliente implements Runnable{
 
 			// loop: le a entrada do pipe e escreve no arquivo
 
-			long startTime = System.currentTimeMillis();
+			long startTime = System.nanoTime();
 
-			do{
-				continue;
-			}while(entrada.read() < 0);
+			try{
+				entrada.readByte();
+			}catch(EOFException erro){}
 
-			long endTime = System.currentTimeMillis();
+			long endTime = System.nanoTime();
 
-			long latencia = endTime - startTime;
+			double latencia = ((double)(endTime - startTime))/1000000;
 
-			System.out.println(latencia + "ms");
+			System.out.printf("\t%.6f ms\n",latencia);
 
 		}//try
 		catch(EOFException erroLeitura){

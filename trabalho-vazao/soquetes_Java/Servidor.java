@@ -102,10 +102,12 @@ class SessaoServidor implements Runnable{
 					System.out.println( idSessao + ": \t" + "Teste Concluído!");
 					continua = false;
 				} else if(requisicao == 2) {
-					saida.writeInt(1);
+					saida.writeByte(1);
 					saida.flush();
 					System.out.println( idSessao + ": \t" + "Resposta do Ping");
 					continua = false;
+				} else if(requisicao == 3) {
+					
 				}
 				else{
 					System.err.println("ERRO: comando invalido!");
@@ -132,7 +134,7 @@ class SessaoServidor implements Runnable{
 		try{
 			// loop: le a entrada do pipe e escreve no arquivo
 			
-			byte[] buffer = new byte[4*1024]; // tamanho padrao do cluster de HDD	
+			byte[] buffer = new byte[1440]; // tamanho padrao do cluster de HDD	
 			long bytesEscritos = 0;
 
 			// Implementação do teste de vazão aqui //
@@ -146,9 +148,9 @@ class SessaoServidor implements Runnable{
 				bytesEscritos += buffer.length;
 			} while (endTime - startTime < 10000);
 
-			float vazao = (float)bytesEscritos/(endTime-startTime); // bytes/ms
+			float vazao = ((float)bytesEscritos)/(endTime-startTime); // bytes/ms
 			vazao = vazao*8; // bits/ms
-			vazao = vazao/1000.0F; //bits/seg
+			vazao = vazao*1000.0F; //bits/seg
 
 			if(vazao > 1000000000){
 				vazao = vazao / 1000000000; // Gbit/seg
