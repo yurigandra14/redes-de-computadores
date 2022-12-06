@@ -51,24 +51,32 @@ class SessaoCliente implements Runnable{
 
 			// IMPORTANTE: implementa abaixo o nosso protocolo de comunicação da aplicação
 
-			//TODO: mudar a vazao pelo ping 
-			// FAZ O PEDIDO
-			System.out.println("\t" + idCliente + " Solicitando Teste de Vazão");
+			// TESTE PING
+			System.out.println("\t" + idCliente + " Solicitando Teste de Ping:");
 			saida.writeInt(1);
 			saida.flush();
-			
-			// RECEBE O SERVICO
-			System.out.println("\t" + idCliente + " Resultado: ");
-			recebePacotes(entrada);
 
-			// PING
-			System.out.println("\t" + idCliente + " Solicitando Teste de Ping:");
-			saida.writeInt(2);
-			saida.flush();
-
-			// RECEBE PING
+			// PING SERVIDOR CLIENTE
 			System.out.println("\t" + idCliente + " Latência: ");
 			recebePing(entrada);
+
+			// TESTE LARGURA DE BANDA UDP
+			System.out.println("\t" + idCliente + " Solicitando Teste de Largura de Banda");
+			saida.writeInt(2);
+			saida.flush();
+			
+			// RESPOSTA
+			System.out.println("\t" + idCliente + " Resultado: ");
+			recebePacotesUDP();
+
+			// TESTE VAZAO TCP
+			System.out.println("\t" + idCliente + " Solicitando Teste de Vazão");
+			saida.writeInt(3);
+			saida.flush();
+			
+			// RESPOSTA
+			System.out.println("\t" + idCliente + " Resultado: ");
+			recebePacotes(entrada);
 
 			// fecha os fluxos (entrada e saída)
 			saida.close();
@@ -91,17 +99,19 @@ class SessaoCliente implements Runnable{
 
 		// loop: le a entrada do pipe e escreve no arquivo
 
-			long startTime = System.currentTimeMillis();
-			long endTime = System.currentTimeMillis();
-
 			byte[] buffer = new byte[10*4*1024]; //40 KB	
 			int bytesLidos;
+
+			long startTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
 
 			do{
 				bytesLidos = entrada.read(buffer);
 				endTime = System.currentTimeMillis();
 				totalBytes = totalBytes + bytesLidos;
+			
 			}while(bytesLidos>0);
+
 
 			float vazao = ((float)totalBytes)/(endTime-startTime); // bytes/ms
 			vazao = vazao*8; // bits/ms
@@ -132,6 +142,58 @@ class SessaoCliente implements Runnable{
 		}
 		
 	}// recebeArquivo
+
+	public void recebePacotesUDP() {
+
+		long totalBytes = 0;
+		
+		try{
+
+			byte[] buffer = new byte[1470];
+
+			DatagramSocket soquete = new DatagramSocket(8383);
+			DatagramPacket resposta = new DatagramPacket(buffer, buffer.length); 
+
+			long startTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
+
+			do{
+				endTime = System.currentTimeMillis();
+				soquete.receive(resposta);
+				totalBytes = totalBytes + resposta.getLength();
+			}while(resposta.getLength() != 1);
+
+			float larguraBanda = ((float)totalBytes)/(endTime-startTime); // bytes/ms
+			larguraBanda = larguraBanda*8; // bits/ms
+			larguraBanda = larguraBanda*1000.0F; //bits/seg
+
+			if(larguraBanda > 1000000000){
+				larguraBanda = larguraBanda / 1000000000; // Gbit/seg
+				System.out.println("\t" + larguraBanda + "Gb/s");
+			}
+			else if(larguraBanda > 1000000){
+				larguraBanda = larguraBanda / 1000000; // Mbit/seg
+				System.out.println("\t" + larguraBanda + "Mb/s");
+			}
+			else if(larguraBanda > 1000){
+				larguraBanda = larguraBanda / 1000; // Kbit/seg
+				System.out.println("\t" + larguraBanda + "Kb/s");
+			}
+
+			soquete.close();
+
+		}//try
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
+
+	}
 
 	public void recebePing(DataInputStream entrada) {
 		try{

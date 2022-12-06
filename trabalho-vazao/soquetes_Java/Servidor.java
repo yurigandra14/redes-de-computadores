@@ -98,16 +98,14 @@ class SessaoServidor implements Runnable{
 			while(continua){
 				int requisicao = entrada.readInt();
 				if(requisicao == 1) {					
+					saida.writeByte(1);
+					saida.flush();
+				} else if(requisicao == 2) {
+					enviaPacotesUDP();
+				} else if(requisicao == 3) {
 					enviaPacotes(saida);
 					System.out.println( idSessao + ": \t" + "Teste Concluído!");
 					continua = false;
-				} else if(requisicao == 2) {
-					saida.writeByte(1);
-					saida.flush();
-					System.out.println( idSessao + ": \t" + "Resposta do Ping");
-					continua = false;
-				} else if(requisicao == 3) {
-					
 				}
 				else{
 					System.err.println("ERRO: comando invalido!");
@@ -134,7 +132,7 @@ class SessaoServidor implements Runnable{
 		try{
 			// loop: le a entrada do pipe e escreve no arquivo
 			
-			byte[] buffer = new byte[1440]; // tamanho padrao do cluster de HDD	
+			byte[] buffer = new byte[1440];
 			long bytesEscritos = 0;
 
 			// Implementação do teste de vazão aqui //
@@ -148,23 +146,6 @@ class SessaoServidor implements Runnable{
 				bytesEscritos += buffer.length;
 			} while (endTime - startTime < 10000);
 
-			float vazao = ((float)bytesEscritos)/(endTime-startTime); // bytes/ms
-			vazao = vazao*8; // bits/ms
-			vazao = vazao*1000.0F; //bits/seg
-
-			if(vazao > 1000000000){
-				vazao = vazao / 1000000000; // Gbit/seg
-				System.out.println(vazao + "Gb/s");
-			}
-			else if(vazao > 1000000){
-				vazao = vazao / 1000000; // Mbit/seg
-				System.out.println(vazao + "Mb/s");
-			}
-			else if(vazao > 1000){
-				vazao = vazao / 1000; // Kbit/seg
-				System.out.println(vazao + "Kb/s");
-			}
-
 		}//try	
 		catch(EOFException erroLeitura){
 			System.err.println("Final de arquivo: " + erroLeitura.toString());
@@ -176,6 +157,43 @@ class SessaoServidor implements Runnable{
 			System.err.println(erroEscrita.toString());
 		}
 		
+	}
+
+	public void enviaPacotesUDP() {
+
+		try{
+			
+			byte[] buffer = new byte[1470];
+			long bytesEscritos = 0;
+
+			DatagramSocket soquete = new DatagramSocket(8484);
+			DatagramPacket resposta;
+			resposta = new DatagramPacket( buffer, buffer.length, conexao.getInetAddress(), 8383);
+
+			long startTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
+
+			do {
+				soquete.send(resposta);
+				endTime = System.currentTimeMillis();
+				bytesEscritos += resposta.getLength();
+			} while (endTime - startTime < 10000);
+
+			resposta = new DatagramPacket( new byte[1], 1, conexao.getInetAddress(), 8383);
+			soquete.send(resposta);
+			soquete.close();
+
+		}//try	
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
+
 	}
 
 }//class SessaoServidor
