@@ -97,13 +97,26 @@ class SessaoServidor implements Runnable{
 			boolean continua = true;
 			while(continua){
 				int requisicao = entrada.readInt();
-				if(requisicao == 1) {					
+				if(requisicao == 1) {			
+					// ALERTA QUE VAI ENVIAR O PING
+					saida.writeInt(1);
+					saida.flush();		
+					// ENVIA PING
 					saida.writeByte(1);
 					saida.flush();
+					// RECEBE PING
+					entrada.readInt();
+					recebePing(entrada);
 				} else if(requisicao == 2) {
+					// LARGURA DE BANDA SERVIDOR ENVIA P/ CLIENTE
 					enviaPacotesUDP();
+					// LARGURA DE BANDA CLIENTE ENVIA P/ SERVIDOR
+					recebePacotesUDP();
 				} else if(requisicao == 3) {
+					// VAZAO SERVIDOR ENVIA P/ CLIENTE
 					enviaPacotes(saida);
+					// VAZAO CLIENTE ENVIA P/ SERVIDOR
+					recebePacotes(entrada);
 					System.out.println( idSessao + ": \t" + "Teste Concluído!");
 					continua = false;
 				}
@@ -128,6 +141,58 @@ class SessaoServidor implements Runnable{
 
 	}//run()
 
+	public void recebePacotes(DataInputStream entrada){
+		
+		long totalBytes = 0;
+		
+		try{
+
+		// loop: le a entrada do pipe e escreve no arquivo
+
+			byte[] buffer = new byte[10*4*1024]; //40 KB	
+			int bytesLidos;
+
+			long startTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
+
+			do{
+				endTime = System.currentTimeMillis();
+				bytesLidos = entrada.read(buffer);
+				totalBytes = totalBytes + bytesLidos;
+			
+			}while(bytesLidos != 1);
+
+
+			float vazao = ((float)totalBytes)/(endTime-startTime); // bytes/ms
+			vazao = vazao*8; // bits/ms
+			vazao = vazao*1000.0F; //bits/seg
+
+			if(vazao > 1000000000){
+				vazao = vazao / 1000000000; // Gbit/seg
+				System.out.println("\t Vazão: " + vazao + "Gb/s");
+			}
+			else if(vazao > 1000000){
+				vazao = vazao / 1000000; // Mbit/seg
+				System.out.println("\t Vazão: " + vazao + "Mb/s");
+			}
+			else if(vazao > 1000){
+				vazao = vazao / 1000; // Kbit/seg
+				System.out.println("\t Vazão: " + vazao + "Kb/s");
+			}
+
+		}//try
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
+		
+	}
+
 	public void enviaPacotes(DataOutputStream saida){
 		try{
 			// loop: le a entrada do pipe e escreve no arquivo
@@ -145,6 +210,7 @@ class SessaoServidor implements Runnable{
 				endTime = System.currentTimeMillis();
 				bytesEscritos += buffer.length;
 			} while (endTime - startTime < 10000);
+			saida.write(new byte[1], 0, 1);
 
 		}//try	
 		catch(EOFException erroLeitura){
@@ -194,6 +260,87 @@ class SessaoServidor implements Runnable{
 			System.err.println(erroEscrita.toString());
 		}
 
+	}
+
+	public void recebePacotesUDP() {
+
+		long totalBytes = 0;
+		
+		try{
+
+			byte[] buffer = new byte[1470];
+
+			DatagramSocket soquete = new DatagramSocket(8181);
+			DatagramPacket resposta = new DatagramPacket(buffer, buffer.length); 
+
+			long startTime = System.currentTimeMillis();
+			long endTime = System.currentTimeMillis();
+
+			do{
+				endTime = System.currentTimeMillis();
+				soquete.receive(resposta);
+				totalBytes = totalBytes + resposta.getLength();
+			}while(resposta.getLength() != 1);
+
+			float larguraBanda = ((float)totalBytes)/(endTime-startTime); // bytes/ms
+			larguraBanda = larguraBanda*8; // bits/ms
+			larguraBanda = larguraBanda*1000.0F; //bits/seg
+
+			if(larguraBanda > 1000000000){
+				larguraBanda = larguraBanda / 1000000000; // Gbit/seg
+				System.out.println("\t Largura de Banda: " + larguraBanda + "Gb/s");
+			}
+			else if(larguraBanda > 1000000){
+				larguraBanda = larguraBanda / 1000000; // Mbit/seg
+				System.out.println("\t Largura de Banda: " + larguraBanda + "Mb/s");
+			}
+			else if(larguraBanda > 1000){
+				larguraBanda = larguraBanda / 1000; // Kbit/seg
+				System.out.println("\t Largura de Banda: " + larguraBanda + "Kb/s");
+			}
+
+			soquete.close();
+
+		}//try
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
+
+	}
+
+	public void recebePing(DataInputStream entrada) {
+		try{
+
+			// loop: le a entrada do pipe e escreve no arquivo
+
+			long startTime = System.nanoTime();
+
+			try{
+				entrada.readByte();
+			}catch(EOFException erro){}
+
+			long endTime = System.nanoTime();
+
+			double latencia = ((double)(endTime - startTime))/1000000;
+
+			System.out.printf("\t Latência: %.6f ms\n",latencia);
+
+		}//try
+		catch(EOFException erroLeitura){
+			System.err.println("Final de arquivo: " + erroLeitura.toString());
+		}
+		catch(FileNotFoundException fnfe){
+			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
+		}
+		catch(IOException erroEscrita){
+			System.err.println(erroEscrita.toString());
+		}
 	}
 
 }//class SessaoServidor
