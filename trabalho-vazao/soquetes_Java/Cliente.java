@@ -41,6 +41,7 @@ class SessaoCliente implements Runnable{
 		try {
 			// abre uma conexao com o servidor
 			conexao = new Socket(serverIP,serverPort);
+            conexao.setSoTimeout(11000);
 
 			// cada conexão possui dois fluxos, um de entrada e outro de saída.
 
@@ -117,11 +118,13 @@ class SessaoCliente implements Runnable{
 			long startTime = System.currentTimeMillis();
 			long endTime = System.currentTimeMillis();
 
-			do{
-				endTime = System.currentTimeMillis();
-				bytesLidos = entrada.read(buffer);
-				totalBytes = totalBytes + bytesLidos;
-			}while(bytesLidos != 1);
+            try{
+                do{
+                    endTime = System.currentTimeMillis();
+                    bytesLidos = entrada.read(buffer);
+                    totalBytes = totalBytes + bytesLidos;
+                }while( (bytesLidos > 0) );
+            }catch(SocketTimeoutException e){}
 
 
 			float vazao = ((float)totalBytes)/(endTime-startTime); // bytes/ms
@@ -142,13 +145,7 @@ class SessaoCliente implements Runnable{
 			}
 
 		}//try
-		catch(EOFException erroLeitura){
-			System.err.println("Final de arquivo: " + erroLeitura.toString());
-		}
-		catch(FileNotFoundException fnfe){
-			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
-		}
-		catch(IOException erroEscrita){
+		catch(Exception erroEscrita){
 			System.err.println(erroEscrita.toString());
 		}
 		
@@ -166,22 +163,19 @@ class SessaoCliente implements Runnable{
 			long startTime = System.currentTimeMillis();
 			long endTime = System.currentTimeMillis();
 
-			do {
-				saida.write(buffer, 0, buffer.length); // caso o buffer nao esteja cheio, envia ate bytesLidos-1
-				endTime = System.currentTimeMillis();
-				bytesEscritos += buffer.length;
-			} while (endTime - startTime < 10000);
-			saida.write(new byte[1], 0, 1);
+            try{
+
+                do {
+                    saida.write(buffer, 0, buffer.length); // caso o buffer nao esteja cheio, envia ate bytesLidos-1
+                    endTime = System.currentTimeMillis();
+                    bytesEscritos += buffer.length;
+                } while ( (endTime - startTime) < 10000);
+
+            } catch(SocketException e) {}
 
 		}//try	
-		catch(EOFException erroLeitura){
-			System.err.println("Final de arquivo: " + erroLeitura.toString());
-		}
-		catch(FileNotFoundException fnfe){
-			System.err.println("Arquivo nao encontrado: " + fnfe.toString());
-		}
-		catch(IOException erroEscrita){
-			System.err.println(erroEscrita.toString());
+		catch(Exception erroEscrita){
+			System.err.println("Final de arquivo: " + erroEscrita.toString());
 		}
 		
 	}
