@@ -123,7 +123,7 @@ class SessaoCliente implements Runnable{
                     endTime = System.currentTimeMillis();
                     bytesLidos = entrada.read(buffer);
                     totalBytes = totalBytes + bytesLidos;
-                }while( (bytesLidos > 0) );
+                }while( (endTime-startTime) < 10000 );
             }catch(SocketTimeoutException e){}
 
 
